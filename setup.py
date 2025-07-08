@@ -10,8 +10,7 @@ setup(
         'numpy',
         'matplotlib',
         'scipy',
-        'pandas',
-        'json'
+        'pandas'
         # add other dependencies here
     ],
 )
