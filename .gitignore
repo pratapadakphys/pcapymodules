@@ -1,8 +1,67 @@
+# Bytecode and build artifacts
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-.env
+*.so
 *.egg-info/
-**/__pycache__/
-**/*.py[cod]
+*.egg
+*.manifest
+*.spec
+dist/
+build/
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and debugging
+*.log
+*.out
+*.bak
+*.swp
+*.tmp
+*.temp
+
+# Environments and secrets
+.env
+.env.*
+*.secret
+secrets.yaml
+
+# Notebooks you don’t want to commit (optional)
+# If you have scratch or test notebooks:
+# notebooks/tmp/
+# *.checkpoint.ipynb
+
+# Git itself
+.git/
+
+# VS Code Jupyter settings (optional)
+.vscode/settings.json
+.vscode/ipynb*
+
+# Miscellaneous
+*.~*
+
+# Optional: ignore test result caches
+.pytest_cache/
+htmlcov/
+coverage.xml
