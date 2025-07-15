@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Install from https://pypi.org/project/spe2py/
-import spe_loader as sl
+from . import spe_loader as sl
 
 class SpeFile (sl.SpeFile):
     '''

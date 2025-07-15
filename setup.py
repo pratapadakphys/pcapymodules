@@ -10,7 +10,11 @@ setup(
         'numpy',
         'matplotlib',
         'scipy',
-        'pandas'
+        'pandas',
+        'untangle',
+        'requests',
+        'pythonnet',
+        'pyvisa'
         # add other dependencies here
     ],
 )
