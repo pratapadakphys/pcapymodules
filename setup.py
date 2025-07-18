@@ -14,7 +14,8 @@ setup(
         'untangle',
         'requests',
         'pythonnet',
-        'pyvisa'
+        'pyvisa',
+        'pyusb'
         # add other dependencies here
     ],
 )
