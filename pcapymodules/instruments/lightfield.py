@@ -303,8 +303,14 @@ class LFApplication:
 
             acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
             if not acquired:
-                print("Acquisition timeout. Attempting abort.")
-                self.abort()
+                for i in range (3):
+                    print("Acquisition timeout. Wait more and try again - %d."%i)
+                    time.sleep(3)
+                    self.experiment.Acquire()
+                    acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
+                    if acquired:
+                        print("Acquisition completed after retry.")
+                        break
 
         finally:
             self.experiment.ExperimentCompleted -= self._handler_delegate
