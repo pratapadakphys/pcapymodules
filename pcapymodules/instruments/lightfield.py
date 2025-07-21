@@ -288,27 +288,50 @@ class LFApplication:
             self.grating = config.grating
         
     # ACQUISITION
+
+    def _acquire_new(self, timeout=30000): 
+        ## Changes to avoid stalling on acquisition       
+        self._handler_delegate = self.experiment_completed  # protect from GC
+        self.experiment.ExperimentCompleted += self._handler_delegate
+        try:
+            if not self.experiment.IsReadyToRun:
+                print("Experiment not ready. Skipping acquisition.")
+                return
+
+            print("Acquiring data...")
+            self.experiment.Acquire()
+
+            acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
+            if not acquired:
+                print("Acquisition timeout. Attempting abort.")
+                self.abort()
+
+        finally:
+            self.experiment.ExperimentCompleted -= self._handler_delegate
+
+        print(self.file_name)
+
     
-    def _acquire (self):        
+    def _acquire (self, timeout=30000):        
         self.experiment.ExperimentCompleted += self.experiment_completed
         try:
             self.experiment.Acquire()
             print("Acquiring data...")
-            self.acquireCompleted.WaitOne() 
+            self.acquireCompleted.WaitOne(timeout) 
         finally:
             self.experiment.ExperimentCompleted -= self.experiment_completed
             
         print (self.file_name)
 
     
-    def acquire(self,  filepath=None, config = None):
+    def acquire(self,  filepath=None, config = None, timeout = 30000):
         if config is not None:
             self.set_configuration(config)
             
         if filepath is not None:
             self.file_path = filepath
         
-        self._acquire()
+        self._acquire_new(timeout)
         
         return filepath
 
