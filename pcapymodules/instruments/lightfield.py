@@ -290,6 +290,35 @@ class LFApplication:
     # ACQUISITION
 
     def _acquire_new(self, timeout=30000): 
+        acquired = False
+        ## Changes to avoid stalling on acquisition       
+        self._handler_delegate = self.experiment_completed  # protect from GC
+        self.experiment.ExperimentCompleted += self._handler_delegate
+        try:
+            if not self.experiment.IsReadyToRun:
+                print("Experiment not ready. Skipping acquisition.")
+                return
+
+            print("Acquiring data...")
+            self.experiment.Acquire()
+
+            acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
+            
+
+
+        finally:
+            self.experiment.ExperimentCompleted -= self._handler_delegate
+
+        print(self.file_name)
+        if acquired:
+            print("Acquisition completed.")
+            return True
+        else:
+            print("Acquisition failed.")
+            return False
+
+    def _acquire_new1(self, timeout=30000): 
+        acquired = False
         ## Changes to avoid stalling on acquisition       
         self._handler_delegate = self.experiment_completed  # protect from GC
         self.experiment.ExperimentCompleted += self._handler_delegate
@@ -303,19 +332,35 @@ class LFApplication:
 
             acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
             if not acquired:
+                print("Timeout waiting for acquisition. Checking state:")
+                print(f"IsReadyToRun: {self.experiment.IsReadyToRun}")
+                print(f"IsRunning: {self.experiment.IsRunning}")
+
                 for i in range (3):
-                    print("Acquisition timeout. Wait more and try again - %d."%i)
+                    print("[Retry {i}] Retrying acquisition...")
                     time.sleep(3)
-                    self.experiment.Acquire()
-                    acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
-                    if acquired:
-                        print("Acquisition completed after retry.")
-                        break
+                    if self.experiment.IsReadyToRun:
+                        self.experiment.Acquire()
+                        acquired = self.acquireCompleted.WaitOne(timeout)  # timeout after 30s
+                        if acquired:
+                            print("Acquisition completed after retry.")
+                            break
+
+                    else:
+                        print(f"[Retry {i}] Experiment not ready. Skipping retry.")
+
 
         finally:
             self.experiment.ExperimentCompleted -= self._handler_delegate
 
         print(self.file_name)
+        if acquired:
+            print("Acquisition completed.")
+            return True
+        else:
+            print("Acquisition failed after retries.")
+            return False
+
 
     
     def _acquire (self, timeout=30000):        
@@ -337,7 +382,19 @@ class LFApplication:
         if filepath is not None:
             self.file_path = filepath
         
-        self._acquire_new(timeout)
+        success = self._acquire_new(timeout)
+        '''
+        if not success:
+            print("Acquisition still stuck. Restarting LightField...")
+            self.restart_lightfield()
+            time.sleep(2)
+            self.set_configuration(self.config)  # reconfigure settings
+            success = self._acquire_new(timeout)
+
+            if not success:
+                raise RuntimeError("Acquisition failed even after full recovery attempt.")
+        '''
+
         
         return filepath
 
@@ -349,6 +406,22 @@ class LFApplication:
     def experiment_completed(self, sender, event_args):
         print("Acquisition complete.")
         self.acquireCompleted.Set()
+
+    def restart_lightfield(self):
+        self.auto.Dispose()
+        time.sleep(2)
+        self.auto = Automation(True, List[String]())
+        self.application = self.auto.LightFieldApplication
+        self.experiment = self.application.Experiment
+        self.acquireCompleted = AutoResetEvent(False)  # Recreate sync object
+        self._handler_delegate = self.experiment_completed
+
+
+        print("Post-restart state:")
+        print(f"IsReadyToRun: {self.experiment.IsReadyToRun}")
+        print(f"IsRunning: {self.experiment.IsRunning}")
+
+
         
     
 
