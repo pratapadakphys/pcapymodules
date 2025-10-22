@@ -144,7 +144,7 @@ def get_color(value, cmap, val_list ,start=0, N=1000):
     
 class SpeFileSet(FileSet):
     def __init__(self, files, pattern = None, find_text = '', filename = None):
-        super().__init__(files, pattern, find_text, filename)
+        super().__init__(files, pattern, find_text, filename, file_type = '.spe')
         self._load_data()
         self._load_data(col=1, keys = ['x_bg', 'y_bg'])
         self._get_tag()

@@ -1,3 +1,4 @@
+
 import os
 import re
 import pandas as pd
@@ -20,14 +21,14 @@ class FileSet:
     pattern: A dictionary of pattern where key is the variable name and pattern is to match and extract values of the variable from the filename.
         DESCRIPTION: The pattern should be compatible to the python package re.
     '''
-    def __init__(self, files, pattern = None, find_text = '', filenames = None):
+    def __init__(self, files, pattern = None, find_text = '', filenames = None, file_type = '.csv'):
         if isinstance (files, str):
             files = load_files(files, find_text)
             
         elif is_list_of_strings(files):
             fs = []
             for item in files:
-                fs.append(load_files(item, find_text))
+                fs.append(load_files(item, find_text, file_type))
             files = fs
         
         self.df = pd.DataFrame(files)
@@ -115,7 +116,7 @@ def get_files(mult=False):
     root.destroy()
     return filepaths
 
-def load_files(filepaths=None, find_text = ''):
+def load_files(filepaths=None, find_text = '', file_type='.csv'):
     """
     Allows user to load multiple files at once. Each file is stored as an SpeFile object in the list batch.
 
@@ -139,17 +140,17 @@ def load_files(filepaths=None, find_text = ''):
         return_type = "list of SpeFile objects"
         if len(batch) == 1:
             batch = batch[0]
-            return_type = "SpeFile object"
+            return_type = "%s File object"%file_type
         print('Successfully loaded %i file(s) in a %s' % (len(filepaths), return_type))
         return batch
     elif isinstance ( filepaths, list):
         batch = [[] for _ in range(0, len(filepaths))]
         for file in range(0, len(filepaths)):
             if find_text in filepaths[file]:batch[file] = LoadFile.load_function(filepaths[file])
-        return_type = "list of SpeFile objects"
+        return_type = "list of %s File objects"%file_type
         if len(batch) == 1:
             batch = batch[0]
-            return_type = "SpeFile object"
+            return_type = "%s File object"%file_type
         print('Successfully loaded %i file(s) in a %s' % (len(filepaths), return_type))
         return batch
 
@@ -157,16 +158,16 @@ def load_files(filepaths=None, find_text = ''):
         batch = {}
         for key in filepaths:
             if find_text in filepaths[file]:batch[key] = LoadFile.load_function(filepaths[key])
-        return_type = "dictionary of SpeFile objects"
+        return_type = "dictionary of %s File objects"%file_type
         print('Successfully loaded %i file(s) in a %s' % (len(filepaths), return_type))
         return batch
 
     elif os.path.isdir(filepaths):
         files = []
         for f in os.listdir(filepaths):
-            if re.search('.spe', f) and re.search(find_text, f):
+            if re.search(file_type, f) and re.search(find_text, f):
                 files.append(LoadFile.load_function(filepaths + r'//' + f))
-        return_type = "list of SpeFile objects"
+        return_type = "list of %s File objects"%file_type
         print('Successfully loaded %i file(s) in a %s' % (len(files), return_type))
         return files
     else: 
