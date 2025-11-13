@@ -1,8 +1,14 @@
 from setuptools import setup, find_packages
+import re, os
+def get_version():
+    with open(os.path.join("pcapymodules", "__init__.py")) as f:
+        for line in f:
+            if line.startswith("__version__"):
+                return re.search(r'"(.*?)"', line).group(1)
 
 setup(
     name='pcapymodules',
-    version='0.1.1',
+    version=get_version(),
     description='Custom measurement and analysis tools for the lab',
     author='Pratap Chandra Adak',
     packages=find_packages(),

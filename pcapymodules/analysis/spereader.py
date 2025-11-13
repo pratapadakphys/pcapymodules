@@ -9,7 +9,7 @@ This is module to read and manipulate .spe files generated from Princeton
 This requires the follwoing package to be installed:
     numpy
     matplotlib
-    scp2py: Install from https://pypi.org/project/spe2py/
+    scp2py: Install from https://pypi.org/project/spe2py/ (pip install spe2py)
 """
 # Import os module
 import os
@@ -189,12 +189,6 @@ class SpeFile (sl.SpeFile):
     
 
 
-from .loadfile import *
-def load_file(filepath):
-    return SpeFile(filepath)
-
-
-LoadFile.load_function = load_file
 
 
     

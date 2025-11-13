@@ -11,12 +11,18 @@ import matplotlib.pyplot as plt
 from .. import lanmpproject as lp
 import pandas as pd
 import os
-from .spereader  import *
+from .spereader import SpeFile
+from .loadfile import FileSet
 
 
 TAG = False
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
+
+
+def _my_spe_loader(filepath):
+    return SpeFile(filepath)
+
 
 
 def _put_tag (self):
@@ -144,7 +150,7 @@ def get_color(value, cmap, val_list ,start=0, N=1000):
     
 class SpeFileSet(FileSet):
     def __init__(self, files, pattern = None, find_text = '', filename = None):
-        super().__init__(files, pattern, find_text, filename, file_type = '.spe')
+        super().__init__(files, pattern, find_text, filename, file_type = '.spe', loader= _my_spe_loader)
         self._load_data()
         self._load_data(col=1, keys = ['x_bg', 'y_bg'])
         self._get_tag()
@@ -249,33 +255,38 @@ class SpeFileSet(FileSet):
             
    
     
-    def savefig (self, name='plot', transparent = True, dpi = 300, **kwargs):
-        _directory = os.path.dirname(self.df[0][0].filepath)
-                       
-        _directory += r'/Plot/'
-        isExist = os.path.exists(_directory)
-        if not isExist:
+    def savefig(self, name='plot', transparent=True, dpi=300, **kwargs):
+        # first file object
+        first_file = self.df.iloc[0, 0]
+        _directory = os.path.dirname(first_file.filepath)
+
+        _directory = os.path.join(_directory, 'Plot')
+        if not os.path.exists(_directory):
             os.makedirs(_directory)
             print("A new directory is created!")
-        
-        image_filename = os.path.join(_directory,self.tag+' '+name+'.png')
-        plt.savefig(image_filename, transparent = transparent, dpi=dpi, **kwargs)
+
+        tag_str = self.tag if getattr(self, "tag", None) is not None else ""
+        base = (tag_str + " " + name).strip()
+        image_filename = os.path.join(_directory, base + '.png')
+
+        plt.savefig(image_filename, transparent=transparent, dpi=dpi, **kwargs)
         return image_filename
+
     
 
     
-def load_filesets (folders, pattern = None, find_text = ''):
+def load_filesets(folders, pattern=None, find_text=''):
     if isinstance(folders, dict):
         result = {}
-        for key in folders:
-            result [key] = SpeFileSet(folders[key], pattern = pattern, find_text = find_text)
+        for key, path in folders.items():
+            result[key] = SpeFileSet(path, pattern=pattern, find_text=find_text)
     elif isinstance(folders, list):
         result = []
-        for file in folder:
-            result.append = SpeFileSet(file, pattern = pattern, find_text = find_text)
-            
-    else: raise ValueError('Input must be a list or dictionary of foders.')
-            
+        for path in folders:
+            result.append(SpeFileSet(path, pattern=pattern, find_text=find_text))
+    else:
+        raise ValueError('Input must be a list or dictionary of folders.')
     return result
+
         
     

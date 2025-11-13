@@ -10,9 +10,20 @@ This is a package to load single or multiple files into list, or dictionary in a
 The return type dynamically depends on the input type.
 The package also provides way to create panda dataframe from a set of files.
 '''
-class LoadFile:
-    def load_function(filepath):
-        return filepath
+class MyFile:
+    """Generic wrapper for simple tabular files (default: CSV)."""
+    def __init__(self, filepath):
+        self.filepath = filepath
+        root, ext = os.path.splitext(filepath)
+        if ext.lower() == ".csv":
+            self.data = pd.read_csv(filepath)
+        else:
+            raise ValueError(f"Unrecognized file type for MyFile: {filepath}")
+
+def default_loader(filepath):
+    """Default loader: use MyFile for CSV."""
+    return MyFile(filepath)
+
     
 class FileSet:
     '''
@@ -21,21 +32,36 @@ class FileSet:
     pattern: A dictionary of pattern where key is the variable name and pattern is to match and extract values of the variable from the filename.
         DESCRIPTION: The pattern should be compatible to the python package re.
     '''
-    def __init__(self, files, pattern = None, find_text = '', filenames = None, file_type = '.csv'):
-        if isinstance (files, str):
-            files = load_files(files, find_text)
-            
+    def __init__(self, files, pattern=None, find_text='', filenames=None,
+                 file_type='.csv', loader=default_loader):
+        if isinstance(files, str):
+            # Single folder or file
+            if os.path.isdir(files):
+                files = load_files(files, find_text, file_type=file_type, loader=loader)
+            else:
+                files = [loader(files)]
         elif is_list_of_strings(files):
-            fs = []
+            collected = []
             for item in files:
-                fs.append(load_files(item, find_text, file_type))
-            files = fs
-        
-        self.df = pd.DataFrame(files)
+                if os.path.isdir(item):
+                    # Treat as folder
+                    collected.extend(
+                        load_files(item, find_text, file_type=file_type, loader=loader)
+                    )
+                else:
+                    # Treat as single file
+                    collected.append(loader(item))
+            files = collected
+
+        if not files:
+            raise ValueError("No files loaded into the FileSet.")
+
+        self.df = pd.DataFrame({0: files})
         self._update_filename(filenames)
-        self.variable = 'no' 
-        
-        if pattern is not None: 
+        self.variable = 'no'
+        self.df['no'] = range(len(self.df))
+
+        if pattern is not None:
             self._decode_pattern(pattern)
             
     def _update_filename(self, filenames):
@@ -83,7 +109,7 @@ def get_file_set (folders, **kwargs):
     elif isinstance(folders, list):
         Fs = []
         for f in folders:
-            Fs.append(FileSet(f), **kwargs)
+            Fs.append(FileSet(f, **kwargs))
         
         return Fs
     
@@ -116,59 +142,68 @@ def get_files(mult=False):
     root.destroy()
     return filepaths
 
-def load_files(filepaths=None, find_text = '', file_type='.csv'):
+def load_files(filepaths=None, find_text = '', file_type='.csv', loader = default_loader):
     """
-    Allows user to load multiple files at once. Each file is stored as an SpeFile object in the list batch.
+    Allows user to load multiple files at once. Each file is wrapped by the
+    provided `loader` callable (default: MyFile for CSV).
 
     PARAMETERS
     ---------
-    filepaths: TYPE = String (Filepath or folder path), list/dictionary of strings (Multiple filepaths), or None (Prompt user to select files using a dialog box)
-
-    RETURN
-    -------
-        If the input is a filepath,  return a SpeFile object.
-        If the input is a folderpath, return a list of SpeFile objects corresponding to all the .spe files sitting inside the folder (not subfolders).
-        If the input is a list of multiple filepaths, return a list of SpeFile objects of the provided filepaths.
-        If the input is a dictionary of multiple filepaths, return a dictionary of SpeFile objects of the provided filepaths identified with same keys.
-
+    filepaths: str | list[str] | dict[str, str] | None
+        - None: open a file dialog
+        - str (file or folder): load that path
+        - list/dict of str: load multiple paths
     """
+    # GUI file picker
     if filepaths is None:
         filepaths = get_files(True)
-        batch = [[] for _ in range(0, len(filepaths))]
-        for file in range(0, len(filepaths)):
-            batch[file] = LoadFile.load_function(filepaths[file])
-        return_type = "list of SpeFile objects"
+        batch = [loader(fp) for fp in filepaths]
+        return_type = "list of %s File objects" % file_type
         if len(batch) == 1:
             batch = batch[0]
-            return_type = "%s File object"%file_type
-        print('Successfully loaded %i file(s) in a %s' % (len(filepaths), return_type))
-        return batch
-    elif isinstance ( filepaths, list):
-        batch = [[] for _ in range(0, len(filepaths))]
-        for file in range(0, len(filepaths)):
-            if find_text in filepaths[file]:batch[file] = LoadFile.load_function(filepaths[file])
-        return_type = "list of %s File objects"%file_type
-        if len(batch) == 1:
-            batch = batch[0]
-            return_type = "%s File object"%file_type
+            return_type = "%s File object" % file_type
         print('Successfully loaded %i file(s) in a %s' % (len(filepaths), return_type))
         return batch
 
-    elif isinstance ( filepaths, dict):
+    # List of paths
+    elif isinstance(filepaths, list):
+        batch = []
+        for fp in filepaths:
+            fname = os.path.basename(fp)
+            if find_text in fp and re.search(file_type, fname):
+                batch.append(loader(fp))
+
+        count = len(batch)
+        return_type = "list of %s File objects" % file_type
+        if count == 1:
+            batch = batch[0]
+            return_type = "%s File object" % file_type
+
+        print('Successfully loaded %i file(s) in a %s' % (count, return_type))
+        return batch
+
+
+    # Dict of paths
+    elif isinstance(filepaths, dict):
         batch = {}
-        for key in filepaths:
-            if find_text in filepaths[file]:batch[key] = LoadFile.load_function(filepaths[key])
-        return_type = "dictionary of %s File objects"%file_type
-        print('Successfully loaded %i file(s) in a %s' % (len(filepaths), return_type))
+        for key, fp in filepaths.items():
+            if find_text in fp:
+                batch[key] = loader(fp)
+        return_type = "dictionary of %s File objects" % file_type
+        print('Successfully loaded %i file(s) in a %s' % (len(batch), return_type))
         return batch
 
+    # Folder path
     elif os.path.isdir(filepaths):
         files = []
         for f in os.listdir(filepaths):
-            if re.search(file_type, f) and re.search(find_text, f):
-                files.append(LoadFile.load_function(filepaths + r'//' + f))
-        return_type = "list of %s File objects"%file_type
+            if f.lower().endswith(file_type.lower()) and re.search(find_text, f):
+                full = os.path.join(filepaths, f)
+                files.append(loader(full))
+        return_type = "list of %s File objects" % file_type
         print('Successfully loaded %i file(s) in a %s' % (len(files), return_type))
         return files
-    else: 
-        return LoadFile.load_function(filepaths)
+
+    # Single file path
+    else:
+        return loader(filepaths)

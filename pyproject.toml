@@ -1,3 +1,27 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pcapymodules"
+dynamic = ["version"]
+description = "Measurement and analysis tools for optics/RF experiments"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Pratap Chandra Adak" }]
+license = { text = "MIT" }
+dependencies = [
+  "numpy",
+  "matplotlib",
+  "scipy",
+  "pandas",
+  "untangle",
+  "pyvisa",
+  # add others as needed; avoid heavy optional deps here if possible
+]
+
+[tool.setuptools.dynamic]
+version = { attr = "pcapymodules.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["pcapymodules*"]
